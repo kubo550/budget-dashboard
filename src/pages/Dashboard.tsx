@@ -1,32 +1,18 @@
-import {ActionFunctionArgs, redirect, useFetcher, useLoaderData} from "react-router-dom";
-import {fetchData, saveData} from "../helpers/FetchData";
+import {ActionFunctionArgs, redirect, useLoaderData} from "react-router-dom";
+import {addBudget, fetchData, saveData} from "../helpers/fetchData";
 import {Intro} from "../components/Intro";
 import {toast} from "react-toastify";
 import {AddBudgetForm} from "../components/AddBudgetForm";
 import {v4 as uuidv4} from 'uuid';
 import moment from "moment";
 import {AddExpenseForm} from "../components/AddExpenseForm";
+import {BudgetItem} from "../components/BudgetItem";
+import {Expenses} from "../components/Expenses";
 
 export type Budget = { id: string, name: string, amount: number, createdAt: string, color: string }
 
-export function generateRandomColor() {
-    return '#' + Math.floor(Math.random() * 16777215).toString(16);
-}
 
-async function addBudget(budget: { name: string, amount: number }) {
-
-    const newBudget = {
-        id: uuidv4(),
-        name: budget.name,
-        amount: budget.amount,
-        createdAt: moment().format(),
-        color: generateRandomColor()
-    }
-
-    const budgets = await fetchData('budgets');
-    await saveData('budgets', [...budgets, newBudget])
-}
-
+export type Expense = { budgetId: string, name: string, amount: number, id: string, createdAt: string };
 const addExpense = async (expense: { budgetId: string, name: string, amount: number }) => {
     const newExpense = {
         id: uuidv4(),
@@ -36,7 +22,7 @@ const addExpense = async (expense: { budgetId: string, name: string, amount: num
         budgetId: expense.budgetId
     }
 
-    const expenses = await fetchData('expenses') || [];
+    const expenses = await fetchData<Expense[]>('expenses') || [];
     await saveData('expenses', [...expenses, newExpense])
 
 }
@@ -44,10 +30,13 @@ const addExpense = async (expense: { budgetId: string, name: string, amount: num
 export const dashboardLoader = async () => {
     const username = await fetchData('username');
     const budgets = await fetchData('budgets');
+    const expenses = await fetchData('expenses') as Expense[];
 
+    console.log('i have expenses', expenses)
     return {
         username,
-        budgets
+        budgets,
+        expenses
     }
 }
 
@@ -95,20 +84,37 @@ export const dashboardAction = async (args: ActionFunctionArgs) => {
                 amount: +amount
             });
 
-            return redirect('/');
+            return toast.success('Expense added');
 
         } catch (e) {
             console.error(e);
             toast.error('Something went wrong');
 
         }
-    }
+    } else if (_action === 'deleteExpense') {
+        const id = data.get('id') as string;
+        const expenses = await fetchData<Expense[]>('expenses') || [];
+        const newExpenses = expenses.filter(expense => expense.id !== id);
 
+        await saveData('expenses', newExpenses);
+
+        toast.success('Expense deleted');
+        return redirect('/');
+
+    }
 }
 
 
 export const Dashboard: React.FC = () => {
-    const {username, budgets} = useLoaderData() as { username: string, budgets: Budget[] };
+    const {
+        username,
+        budgets,
+        expenses
+    } = useLoaderData() as { username: string, budgets: Budget[], expenses: Expense[] };
+
+    const sortedExpenses = expenses.sort((a, b) => {
+        return moment(b.createdAt).diff(moment(a.createdAt))
+    });
     return (
         <div>
             {
@@ -123,6 +129,25 @@ export const Dashboard: React.FC = () => {
                                             <AddBudgetForm/>
                                             <AddExpenseForm budgets={budgets}/>
                                         </div>
+                                        <h2>My Budgets</h2>
+
+                                        <div className="budgets">
+                                            {
+                                                budgets.map(budget => (
+                                                    <BudgetItem budget={budget} key={budget.id}/>
+                                                ))
+                                            }
+                                        </div>
+
+                                        {
+                                            expenses.length > 0 && (
+                                                <div className="grid-sm">
+                                                    <h2>Recent Expenses</h2>
+                                                    <Expenses expenses={sortedExpenses.splice(0, 5)}/>
+                                                </div>
+                                            )
+                                        }
+
                                     </div>
                                 ) : (
                                     <div className="grid-sm">
@@ -136,10 +161,7 @@ export const Dashboard: React.FC = () => {
                                         <AddBudgetForm/>
                                     </div>
                                 )
-
                             }
-
-
                         </div>
                     </div>
 

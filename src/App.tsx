@@ -2,7 +2,7 @@ import {createBrowserRouter, createRoutesFromElements, redirect, Route, RouterPr
 import {dashboardLoader, Dashboard, dashboardAction} from "./pages/Dashboard";
 import {ErrorPage} from "./pages/ErrorPage";
 import {Main, mainLoader} from "./layout/Main";
-import {removeItem} from "./helpers/FetchData";
+import {removeItem} from "./helpers/fetchData";
 
 import {ToastContainer, toast} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -10,6 +10,8 @@ import 'react-toastify/dist/ReactToastify.css';
 const logOut = async () => {
 
     await removeItem('username');
+    await removeItem('budgets');
+    await removeItem('expenses');
     toast.success('You have been logged out');
     return redirect('/')
 };

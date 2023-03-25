@@ -1,7 +1,7 @@
 import {Outlet, useLoaderData} from "react-router-dom";
 import bgWave from "../assets/wave.svg";
 import {Nav} from "../components/Nav";
-import {fetchData} from "../helpers/FetchData";
+import {fetchData} from "../helpers/fetchData";
 
 
 export const mainLoader = async () => {
